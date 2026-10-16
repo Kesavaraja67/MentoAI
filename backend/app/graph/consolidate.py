@@ -47,6 +47,18 @@ def consolidate(session_id: str, llm_summary_fn=None) -> dict:
         {"sid": session_id},
     )
     if not meta_result.result_set:
+        # Check if this session was already consolidated into a child graph (idempotency after cleanup)
+        from app.graph.seed import PERSONAS
+        for p in PERSONAS:
+            cg = get_graph(f"child_{p['id']}")
+            ep_check = cg.query(
+                "MATCH (e:Episode {session_id: $sid}) RETURN e.id",
+                {"sid": session_id},
+            )
+            if ep_check.result_set:
+                existing_episode_id = ep_check.result_set[0][0]
+                return _read_existing_diff(cg, existing_episode_id)
+
         raise ValueError(f"Session {session_id} not found in graph")
 
     child_id, graph_mode, started_at = meta_result.result_set[0]

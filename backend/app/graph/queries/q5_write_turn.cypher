@@ -32,9 +32,10 @@ CREATE (sess)-[:HAS_TURN]->(t)
 SET sess.turn_count = sess.turn_count + 1
 
 -- Link previous turn if one exists
-WITH t, $n AS n
-OPTIONAL MATCH (prev:Turn {n: n - 1})
-WHERE prev IS NOT NULL
-CREATE (prev)-[:NEXT]->(t)
+WITH t, sess, $n AS n
+OPTIONAL MATCH (sess)-[:HAS_TURN]->(prev:Turn {n: n - 1})
+FOREACH (_ IN CASE WHEN prev IS NOT NULL THEN [1] ELSE [] END |
+    CREATE (prev)-[:NEXT]->(t)
+)
 
 RETURN t.n AS turn_n

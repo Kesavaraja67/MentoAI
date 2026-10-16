@@ -20,7 +20,7 @@ from app.engines.mastery import (
 )
 from app.engines.problems import generate_problem, parallel_problem
 from app.engines.planner import plan_next_step, PlannerOutcome
-from app.graph.schema import seed_curriculum, build_session_graph
+from app.graph.schema import seed_curriculum, build_child_graph, build_session_graph
 from app.graph.client import delete_graph
 
 
@@ -228,6 +228,7 @@ class TestPlanner:
     @pytest.fixture(autouse=True)
     def setup_session_graph(self):
         seed_curriculum()
+        build_child_graph("leo")
         self.session_id = "test_planner_sess"
         build_session_graph(
             child_id="leo",
@@ -238,6 +239,7 @@ class TestPlanner:
         )
         yield
         delete_graph(f"session_{self.session_id}")
+        delete_graph("child_leo")
 
     def test_praise_on_same_skill_when_not_mastered(self):
         # Leo count_on starts at 0.35. A correct answer with confidence 0.575 continues
