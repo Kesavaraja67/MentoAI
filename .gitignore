@@ -1,0 +1,11 @@
+.env
+.env.prod
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+node_modules/
+.next/
+*.log
+falkordb_data/
+caddy_data/

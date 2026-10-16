@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: primer_falkordb_prod
+    # FalkorDB is on the internal Docker network only. Port NOT published.
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+    networks:
+      - primer_net
+
+  backend:
+    image: primer_backend:latest
+    container_name: primer_backend_prod
+    env_file:
+      - .env.prod
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+    depends_on:
+      - falkordb
+    restart: unless-stopped
+    networks:
+      - primer_net
+
+  frontend:
+    image: primer_frontend:latest
+    container_name: primer_frontend_prod
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - primer_net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: primer_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - primer_net
+
+volumes:
+  falkordb_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  primer_net:
+    driver: bridge

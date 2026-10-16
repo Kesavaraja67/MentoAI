@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: primer_falkordb
+    # FalkorDB must NOT be exposed to the internet.
+    # We only publish on localhost so the developer can inspect it with redis-cli.
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+    networks:
+      - primer_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: primer_backend
+    env_file:
+      - .env
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - falkordb
+    restart: unless-stopped
+    networks:
+      - primer_net
+    volumes:
+      - ./backend:/app
+    # Development: reload on code change
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  falkordb_data:
+
+networks:
+  primer_net:
+    driver: bridge
