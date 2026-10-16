@@ -31,7 +31,7 @@ class StartSessionRequest(BaseModel):
 class ProblemOut(BaseModel):
     problem_id: str
     skill_id: str
-    op: Literal["+", "-", "?"]
+    op: Literal["+", "-", "?", "count"]
     a: int
     b: int
     answer: int
