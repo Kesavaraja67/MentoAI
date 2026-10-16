@@ -40,10 +40,19 @@ def _now() -> str:
 
 # ── Q1: child summary ─────────────────────────────────────────────────────────
 
-def q1_child_summary(g: falkordb.Graph, child_id: str) -> list:
+def q1_child_summary(g: falkordb.Graph, child_id: str) -> dict | None:
     cypher = _load("q1_child_summary.cypher")
     result = g.query(cypher, {"child_id": child_id})
-    return result.result_set
+    if not result.result_set:
+        return None
+    row = result.result_set[0]
+    return {
+        "child_id":  row[0],
+        "name":      row[1],
+        "age":       row[2],
+        "interests": row[3] or [],
+        "skills":    row[4] or [],
+    }
 
 
 # ── Q2: diagnose weak ancestor ────────────────────────────────────────────────

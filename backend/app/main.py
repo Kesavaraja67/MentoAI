@@ -27,6 +27,14 @@ app.add_middleware(
 )
 
 
+from app.api import children, sessions, graphview, demo
+
+app.include_router(children.router)
+app.include_router(sessions.router)
+app.include_router(graphview.router)
+app.include_router(demo.router)
+
+
 @app.get("/api/health", tags=["health"])
 def health() -> dict:
     """
