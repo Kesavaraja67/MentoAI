@@ -1,4 +1,8 @@
 .env
+.env.*
+*.env
+backend/.env
+frontend/.env*
 .env.prod
 __pycache__/
 *.pyc

@@ -1,229 +1,94 @@
-# Primer: Cypher Queries Reference
+# MentoAI: FalkorDB Cypher Queries Catalog (G1–G15)
 
-This document catalogs the 8 named Cypher queries powering Primer's graph architecture.
-All query definitions live exclusively as raw `.cypher` files under [`backend/app/graph/queries/`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/) and are executed via typed helpers in [`backend/app/graph/queries.py`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries.py).
-
----
-
-## Architecture Summary
-
-| Context Graph | FalkorDB Key | Lifetime | Queries |
-|---|---|---|---|
-| **Curriculum Template** | `curriculum` | Seed / static template | Seeded once, cloned on demand |
-| **Long-Term Memory** | `child_<child_id>` | Persistent per tenant/child | Q1, Q8, consolidation |
-| **Working Memory** | `session_<session_id>` | Transient (session duration) | Q2, Q3, Q4, Q5, Q6, Q7 |
+All queries are maintained as standalone `.cypher` files under `backend/app/graph/queries/` and executed via typed wrappers in `backend/app/graph/queries.py`.
 
 ---
 
-## Q1: `get_child_summary`
-- **File:** [`q1_child_summary.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q1_child_summary.cypher)
-- **Target Graph:** `child_<id>` (Long-Term Memory)
-- **Parameters:** `$child_id` (string)
-- **Purpose:** Fetches the `Child` profile, their current skill confidences, and their interests for context building and child selection.
-- **Cypher:**
+## Catalog Overview
+
+| ID | Query Name | Purpose | Caller Agent | Cypher File |
+|---|---|---|---|---|
+| **G1** | `learner_snapshot` | Fetches register, interests, active curiosities, open loops, and recent entities | Context Assembly | `g1_learner_snapshot.cypher` |
+| **G2** | `semantic_recall` | 384-d Vector search over Concept embeddings + 1-hop expansion | Context Assembly / `recall` tool | `g2_semantic_recall.cypher` |
+| **G3** | `bridge_paths` | Shortest paths linking target concept to things the learner KNOWS or LOVES | Strategist / `bridge` tool | `g3_bridge_paths.cypher` |
+| **G4** | `weak_prerequisites` | 1-5 hop upstream traversal finding concepts with thin evidence or misconceptions | Strategist | `g4_weak_prerequisites.cypher` |
+| **G5** | `style_outcomes` | Historical success rates of pedagogical moves for this learner | Strategist | `g5_style_outcomes.cypher` |
+| **G6** | `open_loops_ranked` | Ranks unresolved curiosities and saga cliffhangers for session opening | Strategist / Reflector | `g6_open_loops_ranked.cypher` |
+| **G7** | `saga_state` | Retrieves active Tale, current chapter cliffhanger, and featured entities | Storyteller | `g7_saga_state.cypher` |
+| **G8** | `write_evidence` | Creates Evidence node, links to Turn and Concept, upserts KNOWS relation | Listener | `g8_write_evidence.cypher` |
+| **G9** | `write_concept_neighbourhood` | Idempotent upsert of Concept nodes and semantic relationships | Cartographer | `g9_write_concept_neighbourhood.cypher` |
+| **G10** | `write_decision` | Creates Decision with CHOSE and explicit BECAUSE provenance edges | Strategist / Companion | `g10_write_decision.cypher` |
+| **G11** | `decision_trace` | Multi-hop provenance neighborhood for the Why Panel | API / UI | `g11_decision_trace.cypher` |
+| **G12** | `mind_view` | Subgraph of top active concepts and typed links for Constellation visualizer | API / UI | `g12_mind_view.cypher` |
+| **G13** | `merge_duplicates` | Finds candidate duplicate concepts via cosine similarity and name overlap | Reflector | `g13_merge_duplicates.cypher` |
+| **G14** | `hubs_and_clusters` | Computes graph centrality and connected components | Reflector / Digest | `g14_hubs_and_clusters.cypher` |
+| **G15** | `forget_learner` | Drops the tenant graph for complete privacy erasure | API (Rule 6) | `g15_forget_learner.cypher` |
+
+---
+
+## Detailed Cypher Examples
+
+### G1: Learner Snapshot
 ```cypher
-MATCH (c:Child {id: $child_id})
-OPTIONAL MATCH (c)-[:INTERESTED_IN]->(i:Interest)
-WITH c, collect(i.name) AS interests
-MATCH (s:Skill)
+MATCH (l:Learner {id: $learner_id})
+OPTIONAL MATCH (l)-[r_int:LOVES]->(i:Interest)
+OPTIONAL MATCH (l)-[:WONDERS]->(c:Curiosity {status: 'open'})
+OPTIONAL MATCH (l)-[:ON_JOURNEY]->(tale:Tale {status: 'active'})
+OPTIONAL MATCH (l)-[:HAS_OPEN_LOOP]->(op:OpenLoop {status: 'open'})
+OPTIONAL MATCH (l)-[m:MENTIONED]->(e:Entity)
+OPTIONAL MATCH (l)-[:KNOWS]->(k:Concept)
 RETURN
-    c.id                AS child_id,
-    c.name              AS name,
-    c.age               AS age,
-    interests           AS interests,
-    collect({
-        id: s.id,
-        name: s.name,
-        confidence: s.confidence,
-        order: s.order
-    })                  AS skills
+    l.id AS id,
+    l.display_name AS display_name,
+    l.language AS language,
+    l.register_text AS register_text,
+    l.register_conf AS register_conf,
+    l.voice_pref AS voice_pref,
+    collect(DISTINCT i.name) AS interests,
+    collect(DISTINCT {id: c.id, text: c.text, intensity: c.intensity}) AS curiosities,
+    collect(DISTINCT {id: tale.id, title: tale.title}) AS active_tales,
+    collect(DISTINCT {id: op.id, text: op.text, priority: op.priority}) AS open_loops,
+    collect(DISTINCT {name: e.name, kind: e.kind}) AS recent_entities,
+    count(DISTINCT k) AS known_concepts_count
 ```
 
----
-
-## Q2: `diagnose_weak_ancestor`
-- **File:** [`q2_diagnose_weak_ancestor.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q2_diagnose_weak_ancestor.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** `$skill_id` (string), `$misconception_id` (string or `""`)
-- **Purpose:** Variable-length prerequisite graph traversal (1 to 5 hops upstream: `(weak)-[:PREREQUISITE_OF*1..5]->(start)`). Walks backwards through prerequisite relationships to pinpoint the root weak skill (confidence < 0.5). If a classified misconception indicates a skill (`INDICATES_WEAK`), prioritization elevates that match.
-- **Cypher:**
+### G3: Bridge Paths
 ```cypher
-OPTIONAL MATCH (m:Misconception {id: $misconception_id})-[:INDICATES_WEAK]->(indicated:Skill)
-WITH indicated
-
-MATCH path = (weak:Skill)-[:PREREQUISITE_OF*1..5]->(start:Skill {id: $skill_id})
-WHERE weak.confidence < 0.5
-WITH weak, path,
-     CASE WHEN indicated IS NOT NULL AND indicated.id = weak.id THEN 1 ELSE 0 END AS is_indicated
-ORDER BY is_indicated DESC, weak.confidence ASC, length(path) ASC
-LIMIT 1
-
+MATCH (target:Concept {key: $target_concept})
+MATCH (l:Learner {id: $learner_id})
+MATCH (known:Concept)<-[:KNOWS]-(l)
+MATCH p = shortestPath((target)-[:PREREQUISITE_OF|ANALOGOUS_TO|PART_OF|TOUCHES*1..4]-(known))
+WHERE target <> known
 RETURN
-    weak.id         AS weak_skill_id,
-    weak.name       AS weak_skill_name,
-    weak.confidence AS weak_confidence,
-    [n IN nodes(path) | n.id] AS path_ids
+    known.key AS bridge_concept,
+    known.name AS bridge_name,
+    [rel IN relationships(p) | type(rel)] AS edge_types,
+    length(p) AS hops
+ORDER BY hops ASC
+LIMIT 3
 ```
 
----
-
-## Q3: `frontier_skill`
-- **File:** [`q3_frontier_skill.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q3_frontier_skill.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** None
-- **Purpose:** Determines the next skill ready to learn. Identifies unmastered skills (`confidence < 0.8`) where *all* direct prerequisites are already mastered (`confidence >= 0.8`), picking the earliest in curriculum order (`s.order ASC`).
-- **Cypher:**
-```cypher
-MATCH (s:Skill)
-WHERE s.confidence < 0.8
-OPTIONAL MATCH (unmet:Skill)-[:PREREQUISITE_OF]->(s)
-WHERE unmet.confidence < 0.8
-WITH s, unmet
-WHERE unmet IS NULL
-RETURN
-    s.id         AS skill_id,
-    s.name       AS skill_name,
-    s.confidence AS confidence
-ORDER BY s.order ASC, s.confidence ASC
-LIMIT 1
-```
-
----
-
-## Q4: `rank_hint_styles`
-- **File:** [`q4_rank_hint_styles.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q4_rank_hint_styles.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** None
-- **Purpose:** Retrieves procedural memory for hint styles (`story`, `visual`, `question`, `physical`) ordered by historical effectiveness: `score DESC`, `tries ASC`, `order ASC`.
-- **Cypher:**
-```cypher
-MATCH (h:HintStyle)
-RETURN
-    h.id    AS id,
-    h.score AS score,
-    h.tries AS tries,
-    h.order AS order
-ORDER BY h.score DESC, h.tries ASC, h.order ASC
-```
-
----
-
-## Q5: `write_turn`
-- **File:** [`q5_write_turn.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q5_write_turn.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** `$session_id`, `$n`, `$problem_id`, `$skill_id`, `$op`, `$a`, `$b`, `$answer`, `$given`, `$correct`, `$misconception_id`, `$hint_level`, `$hint_style`, `$ts`
-- **Purpose:** Records each interaction turn as an episodic node, linked to the `Session` and chained via `[:NEXT]` edges from previous turns.
-- **Cypher:**
-```cypher
-MATCH (s:Session {id: $session_id})
-CREATE (t:Turn {
-    n:                $n,
-    problem_id:       $problem_id,
-    skill_id:         $skill_id,
-    op:               $op,
-    a:                $a,
-    b:                $b,
-    answer:           $answer,
-    given:            $given,
-    correct:          $correct,
-    misconception_id: $misconception_id,
-    hint_level:       $hint_level,
-    hint_style:       $hint_style,
-    ts:               $ts
-})
-CREATE (s)-[:HAS_TURN]->(t)
-SET s.turn_count = s.turn_count + 1
-WITH s, t
-OPTIONAL MATCH (s)-[:HAS_TURN]->(prev:Turn {n: $n - 1})
-FOREACH (_ IN CASE WHEN prev IS NOT NULL THEN [1] ELSE [] END |
-    CREATE (prev)-[:NEXT]->(t)
-)
-RETURN t.n AS turn_n
-```
-
----
-
-## Q6: `write_decision`
-- **File:** [`q6_write_decision.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q6_write_decision.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** `$decision_id`, `$ts`, `$kind`, `$summary`, `$memory_used`, `$session_id`
-- **Purpose:** Creates a reasoning provenance `Decision` node (`select_skill`, `diagnose`, `hint`, `regress`, `advance`, `return`) capturing the exact explanation trace.
-- **Cypher:**
-```cypher
-MATCH (s:Session {id: $session_id})
-CREATE (d:Decision {
-    id:          $decision_id,
-    ts:          $ts,
-    kind:        $kind,
-    summary:     $summary,
-    memory_used: $memory_used,
-    session_id:  $session_id
-})
-CREATE (s)-[:MADE_DECISION]->(d)
-RETURN d.id AS decision_id
-```
-
----
-
-## Q7: `get_session_turns`
-- **File:** [`q7_get_session_turns.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q7_get_session_turns.cypher)
-- **Target Graph:** `session_<id>` (Working Memory)
-- **Parameters:** `$session_id` (string)
-- **Purpose:** Fetches all session turns in sequence plus session metadata for memory consolidation into `child_<id>`.
-- **Cypher:**
-```cypher
-MATCH (s:Session {id: $session_id})
-OPTIONAL MATCH (s)-[:HAS_TURN]->(t:Turn)
-WITH s, t
-ORDER BY t.n ASC
-RETURN
-    s.id           AS session_id,
-    s.child_id     AS child_id,
-    s.started_at   AS started_at,
-    s.graph_mode   AS graph_mode,
-    s.target_skill AS target_skill,
-    collect({
-        n:                t.n,
-        problem_id:       t.problem_id,
-        skill_id:         t.skill_id,
-        op:               t.op,
-        a:                t.a,
-        b:                t.b,
-        answer:           t.answer,
-        given:            t.given,
-        correct:          t.correct,
-        misconception_id: t.misconception_id,
-        hint_level:       t.hint_level,
-        hint_style:       t.hint_style,
-        ts:               t.ts
-    }) AS turns
-```
-
----
-
-## Q8: `decision_path`
-- **File:** [`q8_decision_path.cypher`](file:///d:/projects/Nell%20Ai/primer/backend/app/graph/queries/q8_decision_path.cypher)
-- **Target Graph:** `child_<id>` or `session_<id>`
-- **Parameters:** `$decision_id` (string)
-- **Purpose:** Traces the justification subgraph for a specific decision by finding the `Decision` node, its `CHOSE` target, and all `BECAUSE` nodes and edges for visual provenance in the Why panel.
-- **Cypher:**
+### G11: Decision Trace (The Why Panel)
 ```cypher
 MATCH (d:Decision {id: $decision_id})
-OPTIONAL MATCH (d)-[:CHOSE]->(chosen)
+OPTIONAL MATCH (d)-[:CHOSE]->(move:TeachingMove)
+OPTIONAL MATCH (d)-[:TARGETS]->(c:Concept)
+OPTIONAL MATCH (d)-[:MADE_IN]->(t:Turn)
 OPTIONAL MATCH (d)-[b:BECAUSE]->(reason)
 RETURN
-    d.id                      AS decision_id,
-    d.kind                    AS kind,
-    d.summary                 AS summary,
-    d.memory_used             AS memory_used,
-    d.ts                      AS ts,
-    labels(chosen)[0]         AS chosen_label,
-    chosen.id                 AS chosen_id,
+    d.id AS decision_id,
+    d.agent AS agent,
+    d.kind AS kind,
+    d.chosen_move AS chosen_move,
+    d.rationale AS rationale,
+    d.confidence AS confidence,
+    d.ts AS ts,
+    c.name AS chosen_target,
+    t.text AS turn_text,
     collect({
-        role:        b.role,
-        label:       labels(reason)[0],
-        id:          reason.id,
-        name:        CASE WHEN reason.name IS NOT NULL THEN reason.name ELSE reason.id END,
-        confidence:  reason.confidence
-    })                        AS reasons
+        type: labels(reason)[0],
+        note: b.note,
+        text: coalesce(reason.text, reason.quote, reason.statement, reason.name)
+    }) AS because_items,
+    collect(DISTINCT move.name) AS teaching_moves
 ```

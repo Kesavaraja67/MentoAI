@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Heron AI Exact Design Tokens */
+  --content--brand: #fa3600;
+  --content--brand-glow: rgba(250, 54, 0, 0.35);
+  --content--primary: #f0f0ed;
+  --content--secondary: #8c8c88;
+  --content--tertiary: #5c5c58;
+  --content--border: rgba(255, 255, 255, 0.10);
+  --content--border-dashed: rgba(255, 255, 255, 0.16);
+  --content--border-dark: #22232a;
+  
+  --bg-deep: #090a0d;
+  --bg-panel: #0e0f14;
+  --bg-panel-elevated: #15161d;
+  --bg-panel-highlight: #1c1d26;
+
+  --size--border: 1px;
+
+  --font-display: 'Syne', -apple-system, sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geistmono', monospace;
+}
+
+/* Heron AI Exact Selection Color */
+::selection {
+  background-color: #fa3600;
+  color: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-deep);
+  color: var(--content--primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Heron AI Architectural Panel System */
+.heron-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--content--border);
+  position: relative;
+}
+
+.heron-panel-elevated {
+  background: var(--bg-panel-elevated);
+  border: 1px solid var(--content--border);
+  position: relative;
+}
+
+/* Architectural Dashed Border Lines */
+.heron-border-dashed {
+  border: 1px dashed var(--content--border-dashed);
+}
+
+.heron-border-b-dashed {
+  border-bottom: 1px dashed var(--content--border-dashed);
+}
+
+.heron-border-t-dashed {
+  border-top: 1px dashed var(--content--border-dashed);
+}
+
+.heron-border-r-dashed {
+  border-right: 1px dashed var(--content--border-dashed);
+}
+
+/* Heron AI Technical Crosshair Marks */
+.crosshair-tl::before {
+  content: "+";
+  position: absolute;
+  top: -7px;
+  left: -5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--content--brand);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.crosshair-tr::after {
+  content: "+";
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--content--brand);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Heron AI Vermilion Button */
+.heron-btn-brand {
+  background-color: var(--content--brand);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  border: 1px solid var(--content--brand);
+}
+
+.heron-btn-brand:hover {
+  background-color: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.heron-btn-outline {
+  background-color: transparent;
+  color: var(--content--primary);
+  font-family: var(--font-mono);
+  border: 1px solid var(--content--border);
+  transition: all 0.25s ease;
+}
+
+.heron-btn-outline:hover {
+  border-color: var(--content--brand);
+  color: var(--content--brand);
+}
+
+/* Monospace Technical Tags */
+.heron-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content--secondary);
+}
+
+.heron-tag-brand {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content--brand);
+  border: 1px solid rgba(250, 54, 0, 0.4);
+  background: rgba(250, 54, 0, 0.08);
+  padding: 2px 6px;
+}
+
+/* Hatched Telemetry Gauge Pattern */
+.bg-hatched {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--content--brand),
+    var(--content--brand) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+/* Technical Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090a0d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #282933;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--content--brand);
+}

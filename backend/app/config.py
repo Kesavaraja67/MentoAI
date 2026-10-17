@@ -8,6 +8,11 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -23,10 +28,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # LLM
-    llm_mode: Literal["live", "fake"] = "fake"
-    llm_provider: Literal["groq", "openrouter", "gemini", "openai"] = "openai"
-    llm_model: str = "gpt-4o-mini"
-    llm_api_key: str = ""  # may be overridden per-request via BYOK header
+    llm_mode: Literal["live", "fake"] = "live"
+    llm_provider: Literal["groq", "openrouter", "gemini", "openai"] = "groq"
+    llm_model: str = "qwen/qwen3.8-27b"
+    llm_api_key: str = os.getenv("LLM_API_KEY", "")
 
     @property
     def cors_origins_list(self) -> list[str]:

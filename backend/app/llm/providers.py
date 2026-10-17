@@ -37,3 +37,9 @@ def get_base_url(provider: str) -> str:
 def get_default_model(provider: str) -> str:
     prov = provider.lower().strip()
     return DEFAULT_MODELS.get(prov, "gpt-4o-mini")
+
+
+# Aliases for agent runtime compatibility
+ALLOWED_PROVIDERS = list(PROVIDER_BASE_URLS.keys())
+get_provider_base_url = get_base_url
+
