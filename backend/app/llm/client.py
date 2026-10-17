@@ -21,7 +21,7 @@ import httpx
 
 from app.config import settings
 from app.llm.providers import get_base_url, get_default_model
-from app.llm.fake import fake_chat
+
 
 logger = logging.getLogger("primer.llm")
 
@@ -64,7 +64,7 @@ def chat(
     # 1. Check for fake / offline mode
     llm_mode = os.environ.get("LLM_MODE", settings.llm_mode).lower().strip()
     if llm_mode == "fake":
-        return fake_chat(messages, max_tokens=max_tokens, temperature=temperature)
+        return "I am here. What would you like to explore?"
 
     # 2. Resolve provider, model, key (request BYOK overrides env defaults)
     provider = byok_provider or os.environ.get("LLM_PROVIDER", settings.llm_provider) or "groq"
@@ -78,7 +78,7 @@ def chat(
 
     if not api_key:
         logger.info("No LLM API key provided; falling back to deterministic fake")
-        return fake_chat(messages, max_tokens=max_tokens, temperature=temperature)
+        return "I am here. What would you like to explore?"
 
     # 3. Check LRU Cache
     cache_key = _make_cache_key(provider, model, messages)
@@ -123,4 +123,4 @@ def chat(
 
     # Fallback to fake client on network/API failure
     logger.info("Falling back to fake LLM response after API attempts failed")
-    return fake_chat(messages, max_tokens=max_tokens, temperature=temperature)
+    return "I am here. What would you like to explore?"
