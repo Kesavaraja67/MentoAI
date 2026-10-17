@@ -1,6 +1,24 @@
 """
-api — REST endpoints for Primer.
+api — REST endpoints and WebSocket router for MentoAI.
 """
-from app.api import children, sessions, graphview, demo
+from app.api import (
+    learners,
+    conversations,
+    mind,
+    decisions,
+    digest,
+    personas,
+    admin,
+    websocket,
+)
 
-__all__ = ["children", "sessions", "graphview", "demo"]
+__all__ = [
+    "learners",
+    "conversations",
+    "mind",
+    "decisions",
+    "digest",
+    "personas",
+    "admin",
+    "websocket",
+]

@@ -1,24 +1,9 @@
 """
-engines — Core deterministic teaching engines for Primer.
+engines — Pedagogical reasoning in MentoAI v2 is agent-driven and graph-persisted.
 
-Contains:
-- problems: problem generator and parallel problem creator
-- assessor: deterministic answer assessment and misconception classification
-- mastery: explainable confidence updates
-- planner: graph-driven pedagogical decision engine
+Per SPEC v2 Section 1:
+Deterministic arithmetic engines (problems, assessor, mastery) are replaced by:
+- ListenerAgent (evidence, curiosity, misconception extraction)
+- CartographerAgent (dynamic concept map expansion)
+- StrategistAgent (pedagogical planning and decision provenance)
 """
-from app.engines.problems import generate_problem, parallel_problem
-from app.engines.assessor import assess_answer
-from app.engines.mastery import update_confidence, is_weak, is_mastered
-from app.engines.planner import plan_next_step, PlannerOutcome
-
-__all__ = [
-    "generate_problem",
-    "parallel_problem",
-    "assess_answer",
-    "update_confidence",
-    "is_weak",
-    "is_mastered",
-    "plan_next_step",
-    "PlannerOutcome",
-]

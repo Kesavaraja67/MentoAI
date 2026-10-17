@@ -13,9 +13,9 @@ from app.graph.client import ping
 settings = get_settings()
 
 app = FastAPI(
-    title="Primer API",
-    description="Adaptive arithmetic tutor backed by FalkorDB graph memory.",
-    version="0.1.0",
+    title="MentoAI API",
+    description="Voice-first lifelong companion learning engine backed by FalkorDB graph memory.",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -27,12 +27,16 @@ app.add_middleware(
 )
 
 
-from app.api import children, sessions, graphview, demo
+from app.api import learners, conversations, mind, decisions, digest, personas, admin, websocket
 
-app.include_router(children.router)
-app.include_router(sessions.router)
-app.include_router(graphview.router)
-app.include_router(demo.router)
+app.include_router(learners.router)
+app.include_router(conversations.router)
+app.include_router(mind.router)
+app.include_router(decisions.router)
+app.include_router(digest.router)
+app.include_router(personas.router)
+app.include_router(admin.router)
+app.include_router(websocket.router)
 
 
 @app.get("/api/health", tags=["health"])

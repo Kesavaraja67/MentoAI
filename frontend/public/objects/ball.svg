@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#1A1A2E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Cricket Ball -->
+  <circle cx="32" cy="32" r="22" fill="#D97B22"/>
+  <!-- Seam stitch -->
+  <path d="M22 14 C28 22 28 42 22 50" stroke="#FFFFFF" stroke-width="2.5" stroke-dasharray="3 3"/>
+  <path d="M26 14 C32 22 32 42 26 50" stroke="#FFFFFF" stroke-width="2.5" stroke-dasharray="3 3"/>
+</svg>
